@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#08734f"><link rel="manifest" href="manifest.json">
+<title>SUNU DETTES</title><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">S</div><div><b>SUNU DETTES</b><small id="subtitle">دفتر الديون الذكي</small></div></div>
+  <select id="language" aria-label="Language"><option value="ar">العربية</option><option value="fr">Français</option><option value="wo">Wolof</option></select>
+</header>
+<main>
+  <h1 id="welcome">مرحباً بك</h1><p class="muted" id="summaryLabel">ملخص حساباتك</p>
+  <section class="stats">
+    <article class="stat blue"><span id="receivableLabel">ديون لك</span><strong id="receivable">0</strong><small>FCFA</small></article>
+    <article class="stat orange"><span id="payableLabel">ديون عليك</span><strong id="payable">0</strong><small>FCFA</small></article>
+    <article class="stat"><span id="clientsLabel">الزبائن</span><strong id="clientCount">0</strong></article>
+    <article class="stat"><span id="openLabel">ديون مفتوحة</span><strong id="openCount">0</strong></article>
+  </section>
+  <section class="panel">
+    <h2 id="addTitle">إضافة زبون ودين</h2>
+    <form id="debtForm">
+      <div class="grid">
+        <label><span id="nameLabel">اسم الزبون</span><input id="name" required maxlength="100" placeholder="الاسم الكامل"></label>
+        <label><span id="phoneLabel">رقم الهاتف</span><input id="phone" type="tel" required placeholder="+221 ..."></label>
+        <label><span id="typeLabel">نوع الدين</span><select id="type"><option value="receivable">دين لك</option><option value="payable">دين عليك</option></select></label>
+        <label><span id="amountLabel">المبلغ (FCFA)</span><input id="amount" type="number" min="1" step="1" required placeholder="50000"></label>
+        <label><span id="reasonLabel">سبب الدين</span><select id="reason"><option>Marchandise</option><option>Service</option><option>Prêt</option><option>Autre</option></select></label>
+        <label><span id="dueLabel">موعد التسديد</span><input id="due" type="date"></label>
+      </div>
+      <label><span id="notesLabel">ملاحظات</span><textarea id="notes" rows="2"></textarea></label>
+      <button class="primary" type="submit" id="saveButton">حفظ الدين</button>
+      <p class="hint" id="localNotice">نسخة تجريبية: تحفظ البيانات على هذا الجهاز فقط.</p>
+    </form>
+  </section>
+  <section class="panel">
+    <div class="listHead"><h2 id="listTitle">قائمة الديون</h2><input id="search" placeholder="ابحث عن زبون..." aria-label="Search"></div>
+    <div id="debtList" class="debtList"><p class="muted" id="empty">لا توجد ديون مسجلة بعد.</p></div>
+  </section>
+</main>
+<dialog id="paymentDialog">
+  <form method="dialog" id="paymentForm">
+    <h2 id="paymentTitle">تسجيل دفعة</h2><p id="paymentCustomer"></p>
+    <label><span id="paymentAmountLabel">مبلغ الدفعة (FCFA)</span><input id="paymentAmount" type="number" min="1" step="1" required></label>
+    <div class="dialogActions"><button type="button" class="secondary" id="cancelPayment">إلغاء</button><button class="primary" type="submit" id="confirmPayment">تأكيد الدفعة</button></div>
+  </form>
+</dialog>
+<footer>SUNU DETTES · Prototype v0.1</footer>
+<script src="app.js"></script>
+</body></html>
