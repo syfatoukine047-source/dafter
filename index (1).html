@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b2a6b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="دفتر الديون">
+<meta name="description" content="دفتر ديون بسيط بالعربية والفرنسية والولفية. بياناتك تبقى على هاتفك.">
+<title>دفتر الديون</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Reem+Kufi:wght@600&display=swap">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;padding:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: ledger paper. A summary block whose net total carries the accountant's double rule, then ruled person rows that open into their history; a fixed bottom bar adds entries. Arabic runs right-to-left, French and Wolof left-to-right, all through logical properties. */
+:root {
+  --bg: #f4f5f9;
+  --surface: #ffffff;
+  --ink: #161a2e;
+  --muted: #5b6280;
+  --line: #dfe2ee;
+  --accent: #2a3b8f;
+  --on-accent: #ffffff;
+  --pos: #17704f;
+  --neg: #b3342b;
+  --scrim: rgba(14, 17, 34, 0.5);
+  --hero: #1b2a6b;
+  --hero-ink: #ffffff;
+  --hero-dim: #b9c2ee;
+  --pos-on: #7ee3b4;
+  --neg-on: #ff9f94;
+  --seg: #e6e9f4;
+  --shadow: 0 1px 2px rgba(22, 26, 46, .06), 0 8px 24px rgba(22, 26, 46, .06);
+  --f-body: 'IBM Plex Sans Arabic', 'Noto Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-display: 'Reem Kufi', 'Noto Kufi Arabic', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1220; --surface: #181c30; --ink: #eceefa; --muted: #9aa2c4; --line: #2b3152;
+    --accent: #93a5ff; --on-accent: #0f1220; --pos: #5fd6a0; --neg: #ff9288; --scrim: rgba(0, 0, 0, 0.6);
+    --hero: #243273; --seg: #1f2440; --shadow: none;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1220; --surface: #181c30; --ink: #eceefa; --muted: #9aa2c4; --line: #2b3152;
+  --accent: #93a5ff; --on-accent: #0f1220; --pos: #5fd6a0; --neg: #ff9288; --scrim: rgba(0, 0, 0, 0.6);
+  --hero: #243273; --seg: #1f2440; --shadow: none;
+  color-scheme: dark;
+}
+
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.5; }
+body[data-lang="fr"], body[data-lang="wo"] { --f-display: var(--f-body); }
+* { box-sizing: border-box; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app {
+  max-width: 640px; margin-inline: auto;
+  padding-block: 20px 120px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--f-display); font-weight: 600; font-size: 28px; line-height: 1.2; margin: 0; text-wrap: balance; }
+.langs { display: flex; gap: 2px; padding: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
+.lg { min-height: 38px; padding: 0 12px; border-radius: 999px; border: 0; background: none; color: var(--muted); font-weight: 500; font-size: 14px; }
+.lg[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.sync { font-size: 13px; color: var(--muted); margin: 6px 0 0; min-height: 1.5em; }
+.sync.err { color: var(--neg); }
+
+.num { font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; display: inline-block; }
+.pos { color: var(--pos); }
+.neg { color: var(--neg); }
+
+.sum { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; margin-top: 12px; overflow: hidden; }
+.sum-in { display: grid; grid-template-columns: 1fr 1fr; }
+.sum-col { padding: 16px; display: grid; gap: 2px; min-width: 0; align-content: start; }
+.sum-col + .sum-col { border-inline-start: 1px solid var(--line); }
+.lbl { font-size: 13px; color: var(--muted); }
+.fig { font-size: 23px; font-weight: 600; line-height: 1.3; }
+.fig small, .amt small { font-size: 12px; font-weight: 500; color: var(--muted); margin-inline-start: 4px; }
+.net { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 16px 14px; border-top: 1px solid var(--line); }
+.net .fig { font-size: 21px; padding-bottom: 2px; border-bottom: 4px double currentColor; }
+
+.tabs { display: flex; gap: 4px; margin: 20px 0 12px; border-bottom: 1px solid var(--line); }
+.tab { flex: 1; min-height: 48px; font-size: 17px; padding: 0 4px; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--muted); font-weight: 500; }
+.tab[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .c { font-size: 13px; margin-inline-start: 4px; }
+
+.ledger { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.person + .person { border-top: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto 14px; gap: 12px; align-items: center; width: 100%; min-height: 76px; padding: 14px 16px; background: none; border: 0; text-align: start; }
+.who { display: grid; min-width: 0; }
+.nm { font-weight: 600; font-size: 19px; overflow-wrap: anywhere; }
+.st { font-size: 15px; color: var(--muted); }
+.st b { font-weight: 600; }
+.amt { font-size: 22px; font-weight: 600; white-space: nowrap; }
+.settled .nm, .settled .amt { color: var(--muted); }
+.chev { width: 8px; height: 8px; border-inline-end: 2px solid var(--muted); border-block-end: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+.row[aria-expanded="true"] .chev { transform: rotate(-135deg); }
+
+.detail { padding: 0 16px 16px; }
+.hist { list-style: none; margin: 0 0 12px; padding: 0; border-top: 1px dotted var(--line); }
+.hist li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 0; border-bottom: 1px dotted var(--line); }
+.h-main { display: grid; min-width: 0; }
+.h-type { font-size: 14px; font-weight: 500; }
+.h-meta { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.h-amt { font-weight: 500; text-align: end; }
+.h-del { grid-column: 1 / -1; justify-self: start; }
+.linkbtn { background: none; border: 0; padding: 6px 0; min-height: 36px; font-size: 13px; color: var(--muted); text-decoration: underline; }
+.linkbtn.armed { color: var(--neg); font-weight: 600; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); text-decoration: none; font-weight: 500; font-size: 15px; }
+.btn.danger { color: var(--neg); }
+.btn.danger.armed { background: var(--neg); border-color: var(--neg); color: var(--surface); }
+
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 28px 20px; text-align: center; display: grid; gap: 6px; justify-items: center; }
+.empty h2 { font-family: var(--f-display); font-weight: 600; font-size: 20px; margin: 0; }
+.empty p { margin: 0; color: var(--muted); max-width: 34ch; }
+.note-line { text-align: center; color: var(--muted); padding: 20px 0; margin: 0; }
+
+.bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--bg); border-top: 1px solid var(--line);
+  padding-top: 10px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.bar-in { max-width: 640px; margin: 0 auto; }
+.primary { width: 100%; min-height: 52px; border: 0; border-radius: 12px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 17px; }
+.primary:disabled { opacity: .5; cursor: default; }
+
+.scrim { position: fixed; inset: 0; z-index: 20; background: var(--scrim); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--surface); width: 100%; max-width: 560px; max-height: 92dvh; overflow-y: auto; border-radius: 18px 18px 0 0;
+  padding-top: 18px;
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.sheet h2 { font-family: var(--f-display); font-weight: 600; font-size: 22px; margin: 0 0 14px; }
+.field { display: grid; gap: 6px; margin-bottom: 14px; }
+.field > span, legend { font-size: 14px; color: var(--muted); font-weight: 500; }
+.field input[type="text"], .field input[type="date"] { width: 100%; min-height: 48px; padding: 0 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+fieldset { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.choice { position: relative; display: block; }
+.choice input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.choice span { display: grid; gap: 0; min-height: 56px; padding: 8px 12px; align-content: center; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.choice b { font-weight: 600; font-size: 15px; }
+.choice small { font-size: 12px; color: var(--muted); }
+.choice input:checked + span { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--surface); }
+.choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.field input.big { min-height: 60px; font-size: 26px; font-weight: 600; direction: ltr; text-align: start; }
+.check { display: flex; align-items: center; gap: 12px; min-height: 48px; margin-top: 8px; padding: 0 4px; font-size: 16px; color: var(--ink); cursor: pointer; }
+.check input { width: 24px; height: 24px; margin: 0; accent-color: var(--accent); flex: none; }
+.hint { margin: 6px 0 0; min-height: 1.5em; font-size: 14px; color: var(--accent); font-weight: 500; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.two .field { min-width: 0; }
+.choice span { min-height: 60px; }
+.choice b { font-size: 16px; }
+.late { display: inline-block; margin-inline-start: 6px; padding: 0 8px; border: 1px solid currentColor; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--neg); }
+.tools { display: flex; flex-wrap: wrap; gap: 0 22px; margin-top: 18px; }
+.tools .linkbtn { font-size: 15px; min-height: 44px; }
+.tools .sync { flex-basis: 100%; margin: 0; }
+.err-msg { color: var(--neg); font-size: 14px; margin: 0 0 10px; }
+.form-acts { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+.form-acts .btn { min-height: 52px; }
+.form-acts .primary { width: auto; }
+
+/* ---- professional layer ---- */
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mark { width: 36px; height: 36px; flex: none; border-radius: 10px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; }
+.mark svg { width: 20px; height: 20px; }
+h1 { font-size: 24px; }
+
+.hero { margin-top: 14px; padding: 18px 18px 16px; border-radius: 20px; background: var(--hero); color: var(--hero-ink); box-shadow: var(--shadow); display: grid; gap: 10px; }
+.hero-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 28px; }
+.hero-lbl { font-size: 14px; color: var(--hero-dim); }
+.hero-net { display: flex; align-items: baseline; gap: 8px; line-height: 1.1; }
+.hero-net .num { font-size: 40px; font-weight: 600; letter-spacing: -0.5px; }
+.hero-net small { font-size: 15px; color: var(--hero-dim); font-weight: 500; }
+.chip-late { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: var(--neg-on); color: #3a0d09; font-size: 14px; font-weight: 600; }
+.chip-late::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #3a0d09; }
+.split { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, .16); gap: 2px; }
+.split i { display: block; height: 100%; width: 0; transition: width .6s cubic-bezier(.2, .7, .2, 1); }
+#barIn { background: var(--pos-on); }
+#barOut { background: var(--neg-on); }
+.hero-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hero-cols > div { display: grid; gap: 2px; min-width: 0; }
+.hero-cols b { font-size: 22px; font-weight: 600; justify-self: start; }
+.hero-cols .in { color: var(--pos-on); }
+.hero-cols .out { color: var(--neg-on); }
+
+.tabs { background: var(--seg); padding: 4px; border-radius: 14px; border-bottom: 0; gap: 4px; margin: 18px 0 12px; }
+.tab { border-bottom: 0; border-radius: 10px; transition: background .15s, color .15s; }
+.tab[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.q { width: 100%; min-height: 48px; padding: 0 14px; margin-bottom: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; font-size: 16px; }
+.q::placeholder { color: var(--muted); }
+
+.ledger { border-radius: 18px; box-shadow: var(--shadow); }
+.row { grid-template-columns: 44px minmax(0, 1fr) auto 14px; transition: background .12s; }
+.row:active { background: var(--bg); }
+@media (hover: hover) { .row:hover { background: var(--bg); } }
+.av { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 600; font-size: 19px; line-height: 1; }
+.person.is-late { box-shadow: inset 4px 0 0 var(--neg); }
+.person.is-late:dir(rtl) { box-shadow: inset -4px 0 0 var(--neg); }
+.btn, .primary, .lg { transition: transform .1s, background .15s, opacity .15s; }
+.btn:active, .primary:active { transform: scale(.98); }
+.primary { box-shadow: 0 6px 18px rgba(27, 42, 107, .25); }
+.bar { backdrop-filter: blur(8px); }
+
+@keyframes rise { from { opacity: .35; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes unfold { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .ledger.intro .person { animation: rise .45s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--i, 0) * 55ms); }
+  .detail.enter { animation: unfold .22s ease-out; }
+}
+@media (prefers-reduced-motion: reduce) { .split i { transition: none; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sheet { animation: up .18s ease-out; }
+  @keyframes up { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+@media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="app" dir="rtl" lang="ar">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M9 9h6M9 13h6"/></svg></span>
+      <h1 data-i18n="title">دفتر الديون</h1>
+    </div>
+    <div class="langs" role="group" data-i18n-aria="lang">
+      <button class="lg" type="button" data-l="ar" lang="ar" aria-pressed="true">العربية</button>
+      <button class="lg" type="button" data-l="fr" lang="fr" aria-pressed="false">Français</button>
+      <button class="lg" type="button" data-l="wo" lang="wo" aria-pressed="false">Wolof</button>
+    </div>
+  </header>
+  <p class="sync" id="sync" aria-live="polite"></p>
+
+  <section class="hero" data-i18n-aria="summary">
+    <div class="hero-top">
+      <span class="hero-lbl" data-i18n="net"></span>
+      <span class="chip-late" id="lateChip" hidden></span>
+    </div>
+    <div class="hero-net"><span class="num" id="tNet">0</span><small>FCFA</small></div>
+    <div class="split" aria-hidden="true"><i id="barIn"></i><i id="barOut"></i></div>
+    <div class="hero-cols">
+      <div><span class="hero-lbl" data-i18n="sIn"></span><b class="num in" id="tIn">0</b></div>
+      <div><span class="hero-lbl" data-i18n="sOut"></span><b class="num out" id="tOut">0</b></div>
+    </div>
+  </section>
+
+  <div class="tabs" id="tabs">
+    <button class="tab" type="button" data-f="all" aria-pressed="true"><span data-i18n="tAll"></span><span class="c" id="cAll"></span></button>
+    <button class="tab" type="button" data-f="me" aria-pressed="false"><span data-i18n="tMe"></span><span class="c" id="cMe"></span></button>
+    <button class="tab" type="button" data-f="owe" aria-pressed="false"><span data-i18n="tOwe"></span><span class="c" id="cOwe"></span></button>
+  </div>
+
+  <input class="q" id="q" type="search" data-i18n-ph="search" autocomplete="off" hidden>
+  <main id="list"></main>
+
+  <section class="tools" id="tools">
+    <button class="linkbtn" id="bkBtn" type="button" data-i18n="bk" hidden></button>
+    <button class="linkbtn" id="rsBtn" type="button" data-i18n="rs"></button>
+    <input type="file" id="fFile" accept=".json,application/json" hidden>
+    <p class="sync" id="toast" aria-live="polite"></p>
+  </section>
+</div>
+
+<div class="bar" dir="rtl" lang="ar"><div class="bar-in"><button class="primary" id="addBtn" type="button" data-i18n="add" disabled></button></div></div>
+
+<div class="scrim" id="scrim" hidden dir="rtl" lang="ar">
+  <form class="sheet" id="form" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" novalidate>
+    <h2 id="sheetTitle" data-i18n="sheet"></h2>
+    <label class="field"><span data-i18n="fName"></span>
+      <input type="text" id="fName" name="name" list="names" autocomplete="off" maxlength="60" data-i18n-ph="phName">
+    </label>
+    <datalist id="names"></datalist>
+    <label class="field"><span data-i18n="fAmt"></span>
+      <input type="text" class="big" id="fAmt" name="amt" inputmode="numeric" autocomplete="off" placeholder="15000">
+    </label>
+    <fieldset>
+      <legend data-i18n="fDir"></legend>
+      <div class="choices">
+        <label class="choice"><input type="radio" name="dir" value="give" checked><span><b data-i18n="dGive"></b></span></label>
+        <label class="choice"><input type="radio" name="dir" value="take"><span><b data-i18n="dTake"></b></span></label>
+      </div>
+      <label class="check"><input type="checkbox" id="fRepay" name="repay"><span data-i18n="repay"></span></label>
+      <p class="hint" id="hint" aria-live="polite"></p>
+    </fieldset>
+    <div class="two">
+      <label class="field"><span data-i18n="fNote"></span>
+        <input type="text" id="fNote" name="note" maxlength="120" autocomplete="off" data-i18n-ph="phNote">
+      </label>
+      <label class="field"><span data-i18n="fDate"></span>
+        <input type="date" id="fDate" name="date">
+      </label>
+    </div>
+    <label class="field" id="dueWrap"><span data-i18n="fDue"></span>
+      <input type="date" id="fDue" name="due">
+    </label>
+    <p class="err-msg" id="err" role="alert"></p>
+    <div class="form-acts">
+      <button class="primary" type="submit" data-i18n="save"></button>
+      <button class="btn" type="button" id="cancel" data-i18n="cancel"></button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+
+  var CUR = 'FCFA';
+  var KEY = 'dafter-duyoon-v1';
+  var LKEY = 'dafter-lang';
+  var FR_M = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var LANGS = {
+    ar: { dir: 'rtl', months: ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'] },
+    fr: { dir: 'ltr', months: FR_M },
+    wo: { dir: 'ltr', months: ['Sanwiyee','Fewriyee','Mars','Awril','Mee','Suwen','Sulet','Ut','Sattumbar','Oktoobar','Nowembar','Desembar'] }
+  };
+  var TX = {
+    ar: {
+      title: 'دفتر الديون', lang: 'اللغة', summary: 'الملخص',
+      fDir: 'ماذا حدث؟', dGive: 'أعطيتُ مالًا', dTake: 'استلمتُ مالًا', repay: 'هذا تسديد لدين سابق', who: 'الشخص',
+      h_lent: '{n} صار مدينًا لك', h_borrowed: 'صرتَ مدينًا لـ{n}', h_paidMe: '{n} سدّد لك من دينه', h_paidHim: 'سدّدتَ لـ{n} من دينك',
+      sIn: 'لي عند الناس', sOut: 'عليّ للناس', net: 'الصافي',
+      tAll: 'الكل', tMe: 'لي', tOwe: 'عليّ',
+      add: '+ عملية جديدة', loading: 'جارٍ فتح الدفتر…',
+      emptyT: 'الدفتر فارغ', emptyP: 'سجّل أول عملية: اكتب اسم الشخص والمبلغ، وسيحسب الدفتر الباقي بينكما.',
+      noMe: 'لا أحد مدين لك الآن.', noOwe: 'لا شيء عليك الآن.',
+      sheet: 'عملية جديدة', fName: 'الاسم', phName: 'مثال: عمر، أو جارتي فاطو', fType: 'نوع العملية',
+      lent: 'أقرضته', lentH: 'أعطيته مالًا', borrowed: 'اقترضت منه', borrowedH: 'أخذت منه مالًا',
+      paidMe: 'سدّد لي', paidMeH: 'أرجع لي مالًا', paidHim: 'سدّدت له', paidHimH: 'أرجعت له مالًا',
+      fAmt: 'المبلغ (FCFA)', phAmt: 'مثال: 15000', fNote: 'ملاحظة (اختياري)', phNote: 'مثال: ثمن كيس أرز', fDate: 'التاريخ',
+      save: 'حفظ', cancel: 'إلغاء', errName: 'اكتب اسم الشخص.', errAmt: 'اكتب مبلغًا أكبر من صفر.',
+      stMe: 'يدين لك', stOwe: 'تدين له', stDone: 'مسدّد', last: ' · آخر عملية {d}',
+      delTx: 'حذف هذه العملية', delTx2: 'اضغط مرة أخرى للحذف', addTx: '+ عملية',
+      wa: 'تذكير عبر واتساب', waMsg: 'السلام عليكم {n}، تذكير ودّي بأنّ لي عندك {a} FCFA. بارك الله فيك.',
+      delP: 'حذف الحساب', delP2: 'اضغط مرة أخرى لحذف الحساب',
+      syncDb: 'محفوظ على الإنترنت', syncLocal: 'محفوظ على هذا الجهاز فقط', syncErr: 'تعذّر الحفظ، حاول مرة أخرى', syncRO: 'للقراءة فقط', search: 'ابحث عن اسم', noRes: 'لا توجد نتائج', lateN: 'متأخر: {n}',
+      fDue: 'تاريخ الاستحقاق (اختياري)', late: 'متأخر', dueOn: 'الاستحقاق {d}',
+      bk: 'نسخة احتياطية', rs: 'استعادة من نسخة', bkOk: 'تم حفظ النسخة الاحتياطية', rsOk: 'أُضيفت {n} عملية', rsNone: 'لا توجد عمليات جديدة في هذه النسخة', rsBad: 'هذا الملف ليس نسخة من الدفتر'
+    },
+    fr: {
+      title: 'Carnet de dettes', lang: 'Langue', summary: 'Résumé',
+      fDir: 'Que s’est-il passé ?', dGive: 'J’ai donné de l’argent', dTake: 'J’ai reçu de l’argent', repay: 'C’est un remboursement', who: 'la personne',
+      h_lent: '{n} vous doit plus', h_borrowed: 'Vous devez plus à {n}', h_paidMe: '{n} vous rembourse', h_paidHim: 'Vous remboursez {n}',
+      sIn: 'On me doit', sOut: 'Je dois', net: 'Solde',
+      tAll: 'Tous', tMe: 'On me doit', tOwe: 'Je dois',
+      add: '+ Nouvelle opération', loading: 'Ouverture du carnet…',
+      emptyT: 'Le carnet est vide', emptyP: 'Notez la première opération : le nom de la personne et le montant. Le carnet calcule ce qui reste entre vous.',
+      noMe: 'Personne ne vous doit rien pour l’instant.', noOwe: 'Vous ne devez rien pour l’instant.',
+      sheet: 'Nouvelle opération', fName: 'Nom', phName: 'Ex. : Omar, ou ma voisine Fatou', fType: 'Type d’opération',
+      lent: 'Je lui ai prêté', lentH: '', borrowed: 'Il m’a prêté', borrowedH: '',
+      paidMe: 'Il m’a remboursé', paidMeH: 'Il m’a rendu de l’argent', paidHim: 'Je l’ai remboursé', paidHimH: 'Je lui ai rendu de l’argent',
+      fAmt: 'Montant (FCFA)', phAmt: 'Ex. : 15000', fNote: 'Note (facultatif)', phNote: 'Ex. : un sac de riz', fDate: 'Date',
+      save: 'Enregistrer', cancel: 'Annuler', errName: 'Saisissez le nom de la personne.', errAmt: 'Saisissez un montant supérieur à zéro.',
+      stMe: 'Vous doit', stOwe: 'Vous lui devez', stDone: 'Soldé', last: ' · dernière opération le {d}',
+      delTx: 'Supprimer cette opération', delTx2: 'Appuyez encore pour supprimer', addTx: '+ Opération',
+      wa: 'Rappel par WhatsApp', waMsg: 'Salam {n}, petit rappel amical : tu me dois {a} FCFA. Merci !',
+      delP: 'Supprimer le compte', delP2: 'Appuyez encore pour supprimer le compte',
+      syncDb: 'Enregistré en ligne', syncLocal: 'Enregistré sur cet appareil uniquement', syncErr: 'Échec de l’enregistrement, réessayez', syncRO: 'Lecture seule', search: 'Rechercher un nom', noRes: 'Aucun résultat', lateN: '{n} en retard',
+      fDue: 'Échéance (facultatif)', late: 'En retard', dueOn: 'Échéance {d}',
+      bk: 'Sauvegarde', rs: 'Restaurer une sauvegarde', bkOk: 'Sauvegarde enregistrée', rsOk: '{n} opération(s) ajoutée(s)', rsNone: 'Aucune nouvelle opération dans cette sauvegarde', rsBad: 'Ce fichier n’est pas une sauvegarde du carnet'
+    },
+    wo: {
+      title: 'Téereb bor yi', lang: 'Làkk', summary: 'Li des ci kow',
+      fDir: 'Lan la xew?', dGive: 'Jox naa xaalis', dTake: 'Jot naa xaalis', repay: 'Lii mooy fayu bor bi weesu', who: 'nit ki',
+      h_lent: '{n}: leb na ma', h_borrowed: '{n}: leb naa ko', h_paidMe: '{n}: fay na ma', h_paidHim: '{n}: fay naa ko',
+      sIn: 'Li ñu ma leb', sOut: 'Li ma leb', net: 'Li des',
+      tAll: 'Lépp', tMe: 'Ñu ma leb', tOwe: 'Ma leb',
+      add: '+ Bind jëf bu bees', loading: 'Ñuy ubbi téere bi…',
+      emptyT: 'Téere bi amul dara', emptyP: 'Bindal jëf bu njëkk bi: turu nit ki ak xaalis bi. Téere bi dina lim li des ci seen diggante.',
+      noMe: 'Léegi kenn yorelula dara', noOwe: 'Léegi yoreloo kenn dara',
+      sheet: 'Jëf bu bees', fName: 'Tur', phName: 'Misaal: Omar, walla Faatu', fType: 'Jëf bi',
+      lent: 'Lebal naa ko', lentH: 'Ma ko jox xaalis', borrowed: 'Leb naa ko', borrowedH: 'Ma jël ci moom xaalis',
+      paidMe: 'Fay na ma', paidMeH: 'Mu delloo ma xaalis', paidHim: 'Fay naa ko', paidHimH: 'Ma ko delloo xaalis',
+      fAmt: 'Xaalis bi (FCFA)', phAmt: 'Misaal: 15000', fNote: 'Mbind mu gàtt (su nga ko bëggee)', phNote: 'Misaal: saaku ceeb', fDate: 'Bés bi',
+      save: 'Denc', cancel: 'Bàyyi', errName: 'Bindal turu nit ki.', errAmt: 'Bindal xaalis bu ëpp 0.',
+      stMe: 'Leb na ma', stOwe: 'Leb naa ko', stDone: 'Fay na', last: ' · jëf bu mujj {d}',
+      delTx: 'Far jëf bii', delTx2: 'Bësaat ngir far ko', addTx: '+ Jëf',
+      wa: 'Fàttali ko ci WhatsApp', waMsg: 'Asalaamu haleykum {n}, maa ngi lay fàttali ne leb naa la {a} FCFA. Jërëjëf.',
+      delP: 'Far kont bi', delP2: 'Bësaat ngir far kont bi',
+      syncDb: 'Denc nañu ko ci internet', syncLocal: 'Denc nañu ko ci téléfon bii rekk', syncErr: 'Mënu ñu ko denc, jéemaatal', syncRO: 'Ngir gis rekk', search: 'Wut turu nit', noRes: 'Amul dara', lateN: 'Li mujji: {n}',
+      fDue: 'Bés bu ñuy fey (soxlawul)', late: 'Li mujji', dueOn: 'Bés bu ñuy fey: {d}',
+      bk: 'Kopi ngir fagaru', rs: 'Delloo kopi', bkOk: 'Kopi bi am na', rsOk: 'Yokk nañu {n} jëf', rsNone: 'Amul jëf bu bees ci kopi bii', rsBad: 'Dokimaa bii du kopi téere bi'
+    }
+  };
+  var TYPES = { lent: { sign: 1 }, borrowed: { sign: -1 }, paidMe: { sign: -1 }, paidHim: { sign: 1 } };
+
+  var lang = 'ar';
+  try {
+    var sl = localStorage.getItem(LKEY);
+    if (sl && LANGS[sl]) lang = sl;
+    else if (/^fr/i.test(navigator.language || '')) lang = 'fr';
+  } catch (e) {}
+
+  var entries = [];
+  var filter = 'all';
+  var open = {};
+  var loaded = false;
+  var mode = 'local';
+  var col = null;
+  var readOnly = false;
+  var downloads = null;
+  var inflight = 0;
+  var chain = Promise.resolve();
+  var failed = false;
+  var armed = null;
+  var armTimer = null;
+  var focusKey = null;
+  var loadTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+  function t(k, v) {
+    var s = (TX[lang] && TX[lang][k]) || TX.ar[k] || k;
+    if (v) for (var x in v) s = s.split('{' + x + '}').join(v[x]);
+    return s;
+  }
+  function h(tag, props) {
+    var el = document.createElement(tag);
+    if (props) for (var k in props) {
+      var v = props[k];
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k.indexOf('on') === 0) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null || c === false) continue;
+      el.appendChild(c.nodeType ? c : document.createTextNode(c));
+    }
+    return el;
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function norm(s) { return String(s || '').replace(/\s+/g, ' ').trim().slice(0, 60); }
+  function keyOf(s) { return norm(s).toLocaleLowerCase(); }
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function fmt(n) { return new Intl.NumberFormat('fr-FR').format(Math.abs(n)).replace(/[  ]/g, ' '); }
+  function fmtDate(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+    if (!m) return '';
+    return Number(m[3]) + ' ' + LANGS[lang].months[Number(m[2]) - 1] + ' ' + m[1];
+  }
+  function parseAmt(s) {
+    var d = String(s || '').replace(/[٠-٩]/g, function (c) { return String(c.charCodeAt(0) - 1632); }).replace(/\D/g, '');
+    if (!d || d.length > 12) return 0;
+    return Number(d);
+  }
+  function clean(e) {
+    if (!e || typeof e !== 'object' || !TYPES[e.type]) return null;
+    var amt = Number(e.amt);
+    var name = norm(e.name);
+    if (!name || !(amt > 0)) return null;
+    return { id: String(e.id || uid()), name: name, type: e.type, amt: amt, note: String(e.note || '').slice(0, 120), date: String(e.date || ''),
+      due: /^\d{4}-\d{2}-\d{2}$/.test(e.due || '') ? e.due : '' };
+  }
+
+  function group() {
+    var map = {}, list = [];
+    entries.forEach(function (e) {
+      var k = keyOf(e.name);
+      var p = map[k];
+      if (!p) { p = map[k] = { key: k, name: e.name, bal: 0, items: [], last: '' }; list.push(p); }
+      p.bal += TYPES[e.type].sign * e.amt;
+      p.items.push(e);
+      if (e.date > p.last) p.last = e.date;
+    });
+    var td = today();
+    list.forEach(function (p) {
+      var want = p.bal > 0 ? 'lent' : 'borrowed';
+      p.due = '';
+      if (p.bal !== 0) p.items.forEach(function (e) { if (e.type === want && e.due && (!p.due || e.due < p.due)) p.due = e.due; });
+      p.late = !!(p.due && p.due < td);
+    });
+    list.forEach(function (p) { p.items.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }); });
+    list.sort(function (a, b) {
+      var la = a.late ? 0 : 1, lb = b.late ? 0 : 1;
+      if (la !== lb) return la - lb;
+      var sa = a.bal === 0 ? 1 : 0, sb = b.bal === 0 ? 1 : 0;
+      if (sa !== sb) return sa - sb;
+      return Math.abs(b.bal) - Math.abs(a.bal);
+    });
+    return list;
+  }
+
+  function setSync() {
+    var el = $('sync');
+    var msg, err = false;
+    if (!loaded) msg = t('loading');
+    else if (failed) { msg = t('syncErr'); err = true; }
+    else if (readOnly) msg = t('syncRO');
+    else if (mode === 'db') msg = t('syncDb');
+    else msg = t('syncLocal');
+    el.textContent = msg;
+    el.className = 'sync' + (err ? ' err' : '');
+  }
+
+  function enqueue(fn) {
+    inflight++;
+    chain = chain.then(fn).then(function () { failed = false; }, function () { failed = true; })
+      .then(function () { inflight--; setSync(); });
+  }
+  function saveLocal() {
+    try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch (e) { failed = true; }
+    setSync();
+  }
+  function addEntries(list) {
+    list.forEach(function (e) { entries.push(e); });
+    if (col) enqueue(function () { return list.reduce(function (p, e) { return p.then(function () { return col.doc(e.id).set(e); }); }, Promise.resolve()); });
+    else saveLocal();
+  }
+  function removeEntries(ids) {
+    var gone = {};
+    ids.forEach(function (i) { gone[i] = 1; });
+    entries = entries.filter(function (x) { return !gone[x.id]; });
+    if (col) enqueue(function () { return ids.reduce(function (p, i) { return p.then(function () { return col.doc(i).delete(); }); }, Promise.resolve()); });
+    else saveLocal();
+  }
+
+  var shownNum = { tIn: 0, tOut: 0, tNet: 0 };
+  var rafs = {}, tokens = {};
+  function countTo(id, to, signed) {
+    var el = $(id), from = shownNum[id];
+    shownNum[id] = to;
+    function txt(v) { return (signed ? (v > 0 ? '+' : v < 0 ? '\u2212' : '') : '') + fmt(v); }
+    var tok = (tokens[id] || 0) + 1;
+    tokens[id] = tok;
+    cancelAnimationFrame(rafs[id]);
+    var calm = false;
+    try { calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    if (from === to || calm) { el.textContent = txt(to); return; }
+    var t0 = performance.now(), D = 600;
+    (function step(now) {
+      if (tokens[id] !== tok) return;
+      var k = Math.min(1, Math.max(0, (now - t0) / D)), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = txt(Math.round(from + (to - from) * e));
+      if (k < 1) rafs[id] = requestAnimationFrame(step);
+    })(t0);
+    setTimeout(function () { if (tokens[id] === tok) el.textContent = txt(to); }, D + 120);
+  }
+  function avatar(name) {
+    var n = 0, i;
+    for (i = 0; i < name.length; i++) n = (n * 31 + name.charCodeAt(i)) % 360;
+    var el = h('span', { class: 'av', 'aria-hidden': 'true', text: (Array.from(name)[0] || '?').toLocaleUpperCase() });
+    el.style.background = 'hsl(' + n + ' 40% 38%)';
+    return el;
+  }
+  var justOpened = null, intro = true;
+
+  function disarm() { armed = null; clearTimeout(armTimer); }
+  function arm(id, key) {
+    armed = id; focusKey = key;
+    clearTimeout(armTimer);
+    armTimer = setTimeout(function () { armed = null; render(); }, 3500);
+    render();
+  }
+
+  function statusOf(p) {
+    if (p.bal > 0) return { word: t('stMe'), cls: 'pos' };
+    if (p.bal < 0) return { word: t('stOwe'), cls: 'neg' };
+    return { word: t('stDone'), cls: '' };
+  }
+
+  function personEl(p) {
+    var st = statusOf(p);
+    var isOpen = !!open[p.key];
+    var dId = 'd-' + p.key.replace(/[^a-z0-9]/gi, '') + p.items.length;
+    var row = h('button', { class: 'row', type: 'button', 'aria-expanded': String(isOpen), 'aria-controls': dId, 'data-focus': 'p:' + p.key,
+      onclick: function () { open[p.key] = !open[p.key]; justOpened = open[p.key] ? p.key : null; focusKey = 'p:' + p.key; render(); } },
+      avatar(p.name),
+      h('span', { class: 'who' },
+        h('span', { class: 'nm', text: p.name }),
+        h('span', { class: 'st' }, h('b', { class: st.cls, text: st.word }),
+          p.late ? h('span', { class: 'late', text: t('late') }) : (p.due && p.bal !== 0 ? ' · ' + t('dueOn', { d: fmtDate(p.due) }) : ''))),
+      h('span', { class: 'amt ' + st.cls }, h('span', { class: 'num', text: fmt(p.bal) }), h('small', { text: CUR })),
+      h('span', { class: 'chev', 'aria-hidden': 'true' }));
+    var li = h('li', { class: 'person' + (p.bal === 0 ? ' settled' : '') + (p.late ? ' is-late' : '') }, row);
+    if (isOpen) {
+      var hist = h('ul', { class: 'hist' });
+      p.items.forEach(function (e) {
+        var isArmed = armed === e.id;
+        hist.appendChild(h('li', null,
+          h('div', { class: 'h-main' },
+            h('span', { class: 'h-type', text: t(e.type) }),
+            h('span', { class: 'h-meta', text: [fmtDate(e.date), e.due ? t('dueOn', { d: fmtDate(e.due) }) : '', e.note].filter(Boolean).join(' · ') })),
+          h('span', { class: 'h-amt' }, h('span', { class: 'num', text: fmt(e.amt) }), ' ' + CUR),
+          readOnly ? null : h('button', { class: 'linkbtn h-del' + (isArmed ? ' armed' : ''), type: 'button', 'data-focus': 'x:' + e.id,
+            text: isArmed ? t('delTx2') : t('delTx'),
+            onclick: function () {
+              if (armed === e.id) { disarm(); removeEntries([e.id]); render(); }
+              else arm(e.id, 'x:' + e.id);
+            } })));
+      });
+      var acts = h('div', { class: 'acts' },
+        readOnly ? null : h('button', { class: 'btn', type: 'button', text: t('addTx'), 'data-focus': 'a:' + p.key, onclick: function () { openSheet({ name: p.name, type: p.bal > 0 ? 'paidMe' : p.bal < 0 ? 'paidHim' : 'lent' }); } }));
+      if (p.bal > 0) {
+        var msg = t('waMsg', { n: p.name, a: fmt(p.bal) });
+        acts.appendChild(h('a', { class: 'btn', href: 'https://wa.me/?text=' + encodeURIComponent(msg), target: '_blank', rel: 'noopener', text: t('wa') }));
+      }
+      var delId = 'p:' + p.key;
+      var delArmed = armed === delId;
+      if (!readOnly) acts.appendChild(h('button', { class: 'btn danger' + (delArmed ? ' armed' : ''), type: 'button', 'data-focus': 'dp:' + p.key,
+        text: delArmed ? t('delP2') : t('delP'),
+        onclick: function () {
+          if (armed === delId) { disarm(); removeEntries(p.items.map(function (x) { return x.id; })); delete open[p.key]; render(); }
+          else arm(delId, 'dp:' + p.key);
+        } }));
+      li.appendChild(h('div', { class: 'detail' + (justOpened === p.key ? ' enter' : ''), id: dId }, hist, acts));
+    }
+    return li;
+  }
+
+  function render() {
+    var people = group();
+    var tin = 0, tout = 0, nMe = 0, nOwe = 0;
+    people.forEach(function (p) {
+      if (p.bal > 0) { tin += p.bal; nMe++; } else if (p.bal < 0) { tout -= p.bal; nOwe++; }
+    });
+    var net = tin - tout;
+    countTo('tIn', tin, false);
+    countTo('tOut', tout, false);
+    countTo('tNet', net, true);
+    var tot = tin + tout;
+    $('barIn').style.width = tot ? (tin / tot * 100) + '%' : '0%';
+    $('barOut').style.width = tot ? (tout / tot * 100) + '%' : '0%';
+    var nLate = people.filter(function (p) { return p.late; }).length;
+    $('lateChip').hidden = !nLate;
+    if (nLate) $('lateChip').textContent = t('lateN', { n: nLate });
+    $('q').hidden = !entries.length;
+    $('cAll').textContent = people.length ? '(' + people.length + ')' : '';
+    $('cMe').textContent = nMe ? '(' + nMe + ')' : '';
+    $('cOwe').textContent = nOwe ? '(' + nOwe + ')' : '';
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-f') === filter));
+    });
+    $('addBtn').disabled = !loaded || readOnly;
+    $('rsBtn').hidden = readOnly;
+    setSync();
+
+    var dl = $('names');
+    dl.textContent = '';
+    people.forEach(function (p) { dl.appendChild(h('option', { value: p.name })); });
+
+    var box = $('list');
+    box.textContent = '';
+    if (!loaded) {
+      box.appendChild(h('p', { class: 'note-line', text: t('loading') }));
+    } else if (!entries.length) {
+      box.appendChild(h('div', { class: 'empty' },
+        h('h2', { text: t('emptyT') }),
+        h('p', { text: t('emptyP') })));
+    } else {
+      var qv = norm($('q').value).toLocaleLowerCase();
+      var shown = people.filter(function (p) { return (filter === 'all' || (filter === 'me' ? p.bal > 0 : p.bal < 0)) && (!qv || p.key.indexOf(qv) !== -1); });
+      if (!shown.length) {
+        box.appendChild(h('p', { class: 'note-line', text: qv ? t('noRes') : filter === 'me' ? t('noMe') : t('noOwe') }));
+      } else {
+        var ul = h('ul', { class: 'ledger' + (intro && loaded ? ' intro' : '') });
+        shown.forEach(function (p, i) { var li = personEl(p); li.style.setProperty('--i', String(Math.min(i, 8))); ul.appendChild(li); });
+        if (loaded) intro = false;
+        box.appendChild(ul);
+      }
+    }
+
+    justOpened = null;
+    if (focusKey) {
+      var els = document.querySelectorAll('[data-focus]');
+      for (var i = 0; i < els.length; i++) if (els[i].getAttribute('data-focus') === focusKey) { els[i].focus(); break; }
+      focusKey = null;
+    }
+  }
+
+  function applyLang() {
+    var dir = LANGS[lang].dir;
+    ['.app', '.bar', '.scrim'].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) { el.setAttribute('dir', dir); el.setAttribute('lang', lang); }
+    });
+    document.body.setAttribute('data-lang', lang);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (el) { el.textContent = t(el.getAttribute('data-i18n')); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-ph]'), function (el) { el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph'))); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-aria]'), function (el) { el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria'))); });
+    Array.prototype.forEach.call(document.querySelectorAll('.lg'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-l') === lang)); });
+    $('err').textContent = '';
+    updateHint();
+    render();
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.lg'), function (b) {
+    b.addEventListener('click', function () {
+      lang = b.getAttribute('data-l');
+      try { localStorage.setItem(LKEY, lang); } catch (e) {}
+      applyLang();
+    });
+  });
+
+  var form = $('form'), scrim = $('scrim');
+  function openSheet(pref) {
+    pref = pref || {};
+    form.reset();
+    $('fName').value = pref.name || '';
+    var pt = pref.type || 'lent';
+    form.elements.dir.value = (pt === 'lent' || pt === 'paidHim') ? 'give' : 'take';
+    $('fRepay').checked = (pt === 'paidMe' || pt === 'paidHim');
+    updateHint();
+    $('fDate').value = today();
+    $('err').textContent = '';
+    scrim.hidden = false;
+    (pref.name ? $('fAmt') : $('fName')).focus();
+  }
+  function curType() {
+    var give = form.elements.dir.value === 'give';
+    var rep = $('fRepay').checked;
+    return give ? (rep ? 'paidHim' : 'lent') : (rep ? 'paidMe' : 'borrowed');
+  }
+  function updateHint() {
+    $('hint').textContent = t('h_' + curType(), { n: norm($('fName').value) || t('who') });
+    $('dueWrap').hidden = $('fRepay').checked;
+  }
+  function closeSheet() { scrim.hidden = true; $('addBtn').focus(); }
+
+  form.addEventListener('input', updateHint);
+  form.addEventListener('change', updateHint);
+  $('addBtn').addEventListener('click', function () { openSheet(); });
+  $('cancel').addEventListener('click', closeSheet);
+  scrim.addEventListener('click', function (e) { if (e.target === scrim) closeSheet(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !scrim.hidden) closeSheet(); });
+  $('q').addEventListener('input', function () { render(); });
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('.tab');
+    if (!b) return;
+    filter = b.getAttribute('data-f');
+    render();
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = norm($('fName').value);
+    var amt = parseAmt($('fAmt').value);
+    if (!name) { $('err').textContent = t('errName'); $('fName').focus(); return; }
+    if (!amt) { $('err').textContent = t('errAmt'); $('fAmt').focus(); return; }
+    var k = keyOf(name);
+    var same = entries.filter(function (x) { return keyOf(x.name) === k; })[0];
+    var ty = curType();
+    addEntries([{
+      id: uid(), name: same ? same.name : name, type: ty, amt: amt,
+      note: $('fNote').value.trim().slice(0, 120), date: $('fDate').value || today(),
+      due: (ty === 'lent' || ty === 'borrowed') ? ($('fDue').value || '') : ''
+    }]);
+    open[k] = true;
+    justOpened = k;
+    scrim.hidden = true;
+    focusKey = 'p:' + k;
+    render();
+  });
+
+  function loadLocal() {
+    mode = 'local'; col = null;
+    try {
+      var raw = localStorage.getItem(KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      entries = (Array.isArray(arr) ? arr : []).map(clean).filter(Boolean);
+    } catch (e) { entries = []; }
+    loaded = true;
+    render();
+  }
+
+  function toast(k, v, err) {
+    var el = $('toast');
+    el.textContent = t(k, v);
+    el.className = 'sync' + (err ? ' err' : '');
+  }
+  $('bkBtn').addEventListener('click', async function () {
+    var data = JSON.stringify({ app: 'dafter-duyoon', v: 1, exported: new Date().toISOString(), entries: entries }, null, 1);
+    if (!downloads) {
+      try {
+        var url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+        var a = document.createElement('a');
+        a.href = url; a.download = 'dafter-duyoon-' + today() + '.json';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+        toast('bkOk');
+      } catch (e) { toast('syncErr', null, true); }
+      return;
+    }
+    try { await downloads.save({ filename: 'dafter-duyoon-' + today() + '.json', data: data }); toast('bkOk'); }
+    catch (e) { if (!e || e.code !== 'declined') toast('syncErr', null, true); }
+  });
+  $('rsBtn').addEventListener('click', function () { $('fFile').click(); });
+  $('fFile').addEventListener('change', function () {
+    var inp = this, f = inp.files && inp.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      inp.value = '';
+      var obj = null;
+      try { obj = JSON.parse(String(rd.result)); } catch (e) {}
+      var arr = obj && Array.isArray(obj.entries) ? obj.entries : (Array.isArray(obj) ? obj : null);
+      if (!arr || (obj && obj.app && obj.app !== 'dafter-duyoon')) { toast('rsBad', null, true); return; }
+      var have = {};
+      entries.forEach(function (x) { have[x.id] = 1; });
+      var add = [];
+      arr.map(clean).forEach(function (x) { if (x && !have[x.id]) { have[x.id] = 1; add.push(x); } });
+      if (!add.length) { toast('rsNone'); return; }
+      addEntries(add);
+      render();
+      toast('rsOk', { n: add.length });
+    };
+    rd.onerror = function () { toast('rsBad', null, true); };
+    rd.readAsText(f);
+  });
+
+  async function migrate(db, id) {
+    try {
+      var old = db.collection('data/users/' + id).doc('ledger');
+      var snap = await old.get();
+      var d = snap.exists ? snap.data() : null;
+      if (!d || d.migrated || !Array.isArray(d.entries) || !d.entries.length) return;
+      var list = d.entries.map(clean).filter(Boolean);
+      for (var i = 0; i < list.length; i++) await col.doc(list[i].id).set(list[i]);
+      await old.update({ migrated: true });
+    } catch (e) {}
+  }
+
+  async function init() {
+    applyLang();
+    var db = null, user = null, id = null;
+    try {
+      if (window.claude && window.claude.use) {
+        var r = await Promise.all([window.claude.use('db'), window.claude.use('user'), window.claude.use('downloads')]);
+        db = r[0]; user = r[1]; downloads = r[2];
+        if (user) id = await user.id();
+      }
+    } catch (e) { db = null; }
+    $('bkBtn').hidden = false;
+    if (!db) { loadLocal(); return; }
+    mode = 'db';
+    col = db.collection('ledger');
+    try { if (user && (await user.can('data.write')) === false) readOnly = true; } catch (e) {}
+    loadTimer = setTimeout(function () { if (!loaded) { loaded = true; failed = true; render(); } }, 10000);
+    col.onSnapshot(function (snap) {
+      if (snap.metadata.fromCache && snap.empty && !loaded) return;
+      clearTimeout(loadTimer);
+      entries = snap.docs.map(function (d) { var b = d.data() || {}; b.id = d.id; return clean(b); }).filter(Boolean);
+      loaded = true;
+      failed = false;
+      render();
+    }, function () {
+      clearTimeout(loadTimer);
+      failed = true;
+      loaded = true;
+      render();
+    });
+    if (id && !readOnly) migrate(db, id);
+  }
+  init();
+})();
+</script>
+
+</body>
+</html>
